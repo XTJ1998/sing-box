@@ -48,12 +48,19 @@ type Box struct {
 	sync.Mutex
 }
 
-func (b *Box) Start(region string, router bool) error {
+func (b *Box) Start(region string, router bool, apps []string) error {
 	b.Lock()
 	defer b.Unlock()
 	b.router = router
+
+	// 强制重新创建 box 以应用新的路由规则 (因为规则是在 newBox 里生成的)
+	if b.box != nil {
+		_ = b.box.Close()
+		b.box = nil
+	}
+
 	if b.box == nil {
-		err := b.newBox(region)
+		err := b.newBox(region, apps)
 		if err != nil {
 			return err
 		}
@@ -152,7 +159,7 @@ func (b *Box) update() {
 	b.Unlock()
 }
 
-func (b *Box) newBox(proxy string) error {
+func (b *Box) newBox(proxy string, apps []string) error {
 	proxyOutbound, proxyOutboundHost, err := node.GetOutbound(proxy)
 	if err != nil {
 		return err
@@ -396,21 +403,56 @@ func (b *Box) newBox(proxy string) error {
 				},
 			},
 		}, //中国地区直连
-		{
+		//{
+		//	Type: constant.RuleTypeDefault,
+		//	DefaultOptions: option.DefaultRule{
+		//		RawDefaultRule: option.RawDefaultRule{
+		//			Invert: true,
+		//		},
+		//		RuleAction: option.RuleAction{
+		//			Action: constant.RuleActionTypeRoute,
+		//			RouteOptions: option.RouteActionOptions{
+		//				Outbound: "proxy",
+		//			},
+		//		},
+		//	},
+		//}, //最终代理
+	}...)
+	// 2. [新增] 动态应用程序规则
+	if len(apps) > 0 {
+		appRule := option.Rule{
 			Type: constant.RuleTypeDefault,
 			DefaultOptions: option.DefaultRule{
 				RawDefaultRule: option.RawDefaultRule{
-					Invert: true,
+					ProcessName: apps, // 使用传入的程序列表
 				},
 				RuleAction: option.RuleAction{
 					Action: constant.RuleActionTypeRoute,
 					RouteOptions: option.RouteActionOptions{
-						Outbound: "proxy",
+						Outbound: "proxy", // 指定程序 -> 走代理
 					},
 				},
 			},
-		}, //最终代理
-	}...)
+		}
+		options.Options.Route.Rules = append(options.Options.Route.Rules, appRule)
+	}
+
+	finalRule := option.Rule{
+		Type: constant.RuleTypeDefault,
+		DefaultOptions: option.DefaultRule{
+			RawDefaultRule: option.RawDefaultRule{
+				Invert: true, // 匹配所有剩余流量
+			},
+			RuleAction: option.RuleAction{
+				Action: constant.RuleActionTypeRoute,
+				RouteOptions: option.RouteActionOptions{
+					Outbound: "direct", // [重点] 默认为直连
+				},
+			},
+		},
+	}
+	options.Options.Route.Rules = append(options.Options.Route.Rules, finalRule)
+
 	_ = os.Remove(path.Path() + "/run.log")
 	options.Log = &option.LogOptions{
 		Disabled:     false,

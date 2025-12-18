@@ -15,7 +15,7 @@ import (
 	http_client "playfast/internal/http-client"
 	"playfast/internal/node"
 	"playfast/utils"
-	"sync/atomic"
+	"sync"
 	"time"
 	"unsafe"
 )
@@ -23,16 +23,21 @@ import (
 var (
 	box      *core.Box
 	ctx      context.Context
-	initFlag atomic.Bool
 	Version  = "1.0.0"
+	initChan = make(chan struct{}) // 新增：用于通知初始化完成的通道
+	initOnce sync.Once             // 新增：确保初始化只执行一次
 )
 
 //export Init
 func Init() {
-	ctx = context.Background()
-	box = core.New(ctx)
-	initFlag.Store(true)
-	log.Println("PlayFast 核心模块初始化完成")
+	// 使用 sync.Once 保证线程安全，防止多次调用 Init 导致重复关闭 channel 而 panic
+	initOnce.Do(func() {
+		ctx = context.Background()
+		box = core.New(ctx)
+		// 关闭通道，这会广播信号给所有阻塞在 <-initChan 的 goroutine
+		close(initChan)
+		log.Println("sing-box 核心模块初始化完成")
+	})
 }
 
 // Switch 启动或停止加速
@@ -42,19 +47,39 @@ func Init() {
 // 返回: 错误信息，如果成功则返回空字符串
 //
 //export Switch
-func Switch(status C.int, proxy *C.char, route C.int) *C.char {
-	// 等待初始化完成
-	for i := 0; i < 300; i++ {
-		if !initFlag.Load() {
-			time.Sleep(time.Millisecond * 100)
-		} else {
-			break
-		}
+func Switch(status C.int, proxy *C.char, route C.int, appList *C.char) *C.char {
+	// 优化后的等待逻辑
+	select {
+	case <-initChan:
+		// 通道已关闭（即 Init 已完成），立即继续执行，无延迟
+	case <-time.After(30 * time.Second): // 保持原有的 30s 超时逻辑
+		// 超时处理：原代码超时后仍继续执行可能会导致空指针崩溃，这里建议直接返回错误
+		return C.CString("错误：核心模块初始化超时或未调用 Init()")
 	}
 
 	proxyStr := C.GoString(proxy)
 	statusBool := status != 0
 	routeBool := route != 0
+
+	var appNames []string
+
+	log.Println("apps!!!")
+
+	log.Printf("%v\n", appList)
+
+	appListStr := C.GoString(appList)
+
+	log.Printf("%v\n", appListStr)
+
+	if len(appListStr) > 0 {
+		if err := json.Unmarshal([]byte(appListStr), &appNames); err != nil {
+			log.Printf("解析应用列表失败: %v", err)
+			// 如果解析失败，您可以选择返回错误，或者默认为空列表（即不加速任何程序）
+			appNames = []string{}
+		}
+	}
+
+	log.Printf("%v\n", appNames)
 
 	var err error
 	if statusBool {
@@ -69,7 +94,8 @@ func Switch(status C.int, proxy *C.char, route C.int) *C.char {
 			_ = gateway
 			_ = mask
 		}
-		if err = box.Start(proxyStr, routeBool); err != nil {
+
+		if err = box.Start(proxyStr, routeBool, appNames); err != nil {
 			return C.CString(err.Error())
 		}
 	} else {
@@ -164,5 +190,4 @@ func Cleanup() {
 	Stop()
 	box = nil
 	ctx = nil
-	initFlag.Store(false)
 }

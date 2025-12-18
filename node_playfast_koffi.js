@@ -9,11 +9,11 @@ function getLibraryPath() {
 
   let libName;
   if (platform === 'win32') {
-    libName = arch === 'x64' ? 'playfast_amd64.dll' : 'playfast_386.dll';
+    libName = arch === 'x64' ? 'signBox64.dll' : 'signBox32.dll';
   } else if (platform === 'darwin') {
-    libName = arch === 'x64' ? 'playfast_amd64.dylib' : 'playfast_386.dylib';
+    libName = arch === 'x64' ? 'signBox64.dylib' : 'signBox32.dylib';
   } else {
-    libName = arch === 'x64' ? 'playfast_amd64.so' : 'playfast_386.so';
+    libName = arch === 'x64' ? 'signBox64.so' : 'signBox32.so';
   }
   
   return path.join(__dirname, libName);
@@ -27,7 +27,7 @@ const lib = koffi.load(libPath);
 
 // 定义函数签名
 const Init = lib.func('Init', 'void', []);
-const Switch = lib.func('Switch', 'str', ['int', 'str', 'int']);
+const Switch = lib.func('Switch', 'str', ['int', 'str', 'int','str']);
 const GetProxyList = lib.func('GetProxyList', 'str', []);
 const GetAnnouncement = lib.func('GetAnnouncement', 'str', []);
 const GetVersion = lib.func('GetVersion', 'str', []);
@@ -113,8 +113,11 @@ async function main() {
     try {
       const proxyName = proxyList[0];
       console.log('  使用节点:', proxyName);
-      
-      const errorMsg = Switch(1,"香港(hysteria2)", 0); // 1=启动, 0=不启用路由模式
+
+
+      //指定程序加速
+      const appList = JSON.stringify(['chrome.exe','msedge.exe']);
+      const errorMsg = Switch(1,"香港(vless)", 0,appList); // 1=启动, 0=不启用路由模式
       
       if (errorMsg && errorMsg.length > 0) {
         console.error('✗ 启动失败:', errorMsg);
@@ -134,8 +137,9 @@ async function main() {
     }
 
     // 5. 等待一段时间
-    console.log('[5] 运行中... (等待 10 秒)');
-    await new Promise(resolve => setTimeout(resolve, 10000));
+    console.log('[5] 运行中...');
+    //60000 60
+    await new Promise(resolve => setTimeout(resolve, (60000) * 5));
 
     // 6. 停止加速
     console.log('[6] 停止加速...');
