@@ -1,0 +1,21 @@
+{
+  "name": "playfast-node-demo",
+  "version": "1.0.0",
+  "description": "PlayFast 共享库 Node.js 调用示例",
+  "main": "node_playfast_koffi.js",
+  "scripts": {
+    "start": "node node_playfast_koffi.js",
+    "demo": "node node_playfast_koffi.js"
+  },
+  "keywords": [
+    "playfast",
+    "proxy",
+    "acceleration"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "koffi": "^2.8.4"
+  }
+}
+
