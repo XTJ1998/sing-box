@@ -139,7 +139,7 @@ async function main() {
     // 5. 等待一段时间
     console.log('[5] 运行中...');
     //60000 60
-    await new Promise(resolve => setTimeout(resolve, (60000) * 5));
+    await new Promise(resolve => setTimeout(resolve, (60000) * 1));
 
     // 6. 停止加速
     console.log('[6] 停止加速...');

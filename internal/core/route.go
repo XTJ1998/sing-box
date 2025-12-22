@@ -58,23 +58,41 @@ func route(appends []string) error {
 	for _, prefix := range routeIps(appends) {
 		if prefix.Addr().Is4() {
 			_, ipNet, _ := net.ParseCIDR(prefix.String())
-			log.Printf("route add %s mask %s %s metric %d if %d", prefix.Addr(), net.IP(ipNet.Mask).String(), defaultNetworkInfo.Gateway, defaultNetworkInfo.Metric-2, defaultNetworkInfo.IfIndex)
-			err = utils.AddRoute(prefix.Addr(), netip.MustParseAddr(net.IP(ipNet.Mask).String()), netip.MustParseAddr(defaultNetworkInfo.Gateway), defaultNetworkInfo.Metric-2, defaultNetworkInfo.IfIndex)
+
+			// 记录要添加的路由信息
+			log.Printf("Adding route: %s mask %s via %s metric %d if %d",
+				prefix.Addr(), net.IP(ipNet.Mask).String(), defaultNetworkInfo.Gateway,
+				defaultNetworkInfo.Metric-2, defaultNetworkInfo.IfIndex)
+
+			// 添加路由规则
+			err = utils.AddRoute(
+				prefix.Addr(),
+				netip.MustParseAddr(net.IP(ipNet.Mask).String()),
+				netip.MustParseAddr(defaultNetworkInfo.Gateway),
+				defaultNetworkInfo.Metric-2,
+				defaultNetworkInfo.IfIndex)
 			if err != nil {
-				log.Println("add route error", err, prefix)
+				log.Println("Failed to add route:", err, prefix)
 			}
 		}
 	}
 	interfaces, err := net.Interfaces()
 	if err != nil {
+		log.Println("Failed to get network interfaces:", err)
 		return err
 	}
 	for _, iface := range interfaces {
 		if iface.Name == "utun25" {
-			err = utils.AddRoute(netip.MustParseAddr("0.0.0.0"), netip.MustParseAddr("0.0.0.0"), netip.MustParseAddr("172.25.0.0"), defaultNetworkInfo.Metric-1, iface.Index)
+			err = utils.AddRoute(
+				netip.MustParseAddr("0.0.0.0"),
+				netip.MustParseAddr("0.0.0.0"),
+				netip.MustParseAddr("172.25.0.0"),
+				defaultNetworkInfo.Metric-1,
+				iface.Index)
 			break
 		}
 	}
+
 	return err
 }
 func deleteRoute(appends []string) {
@@ -87,24 +105,35 @@ func deleteRoute(appends []string) {
 	for _, prefix := range routeIps(appends) {
 		if prefix.Addr().Is4() {
 			_, ipNet, _ := net.ParseCIDR(prefix.String())
-			err := utils.DeleteRoute(prefix.Addr(), netip.MustParseAddr(net.IP(ipNet.Mask).String()), netip.MustParseAddr(defaultNetworkInfo.Gateway), defaultNetworkInfo.Metric-2, defaultNetworkInfo.IfIndex)
+			err := utils.DeleteRoute(
+				prefix.Addr(),
+				netip.MustParseAddr(net.IP(ipNet.Mask).String()),
+				netip.MustParseAddr(defaultNetworkInfo.Gateway),
+				defaultNetworkInfo.Metric-2,
+				defaultNetworkInfo.IfIndex)
 			if err != nil {
-				log.Println("delete route error", err, prefix)
+				log.Println("Failed to delete route:", err, prefix)
 			}
 		}
 	}
 	interfaces, err := net.Interfaces()
 	if err != nil {
+		log.Println("Failed to get network interfaces:", err)
 		return
 	}
 	for _, iface := range interfaces {
 		if iface.Name == "utun25" {
-			err = utils.DeleteRoute(netip.MustParseAddr("0.0.0.0"), netip.MustParseAddr("0.0.0.0"), netip.MustParseAddr("172.25.0.0"), defaultNetworkInfo.Metric-2, iface.Index)
+			err = utils.DeleteRoute(
+				netip.MustParseAddr("0.0.0.0"),
+				netip.MustParseAddr("0.0.0.0"),
+				netip.MustParseAddr("172.25.0.0"),
+				defaultNetworkInfo.Metric-2,
+				iface.Index)
 			break
 		}
 	}
 	err = utils.SetInterfaceMetric(defaultNetworkInfo.IfIndex, 0)
 	if err != nil {
-		log.Println("deleteRoute: SetInterfaceMetric error", err)
+		log.Println("deleteRoute: Failed to reset interface metric:", err)
 	}
 }

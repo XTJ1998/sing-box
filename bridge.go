@@ -62,14 +62,7 @@ func Switch(status C.int, proxy *C.char, route C.int, appList *C.char) *C.char {
 	routeBool := route != 0
 
 	var appNames []string
-
-	log.Println("apps!!!")
-
-	log.Printf("%v\n", appList)
-
 	appListStr := C.GoString(appList)
-
-	log.Printf("%v\n", appListStr)
 
 	if len(appListStr) > 0 {
 		if err := json.Unmarshal([]byte(appListStr), &appNames); err != nil {
@@ -78,8 +71,6 @@ func Switch(status C.int, proxy *C.char, route C.int, appList *C.char) *C.char {
 			appNames = []string{}
 		}
 	}
-
-	log.Printf("%v\n", appNames)
 
 	var err error
 	if statusBool {

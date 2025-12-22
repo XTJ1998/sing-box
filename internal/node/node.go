@@ -36,12 +36,15 @@ func Get() []Proxy {
 	_ = json.Unmarshal(all, &data)
 	return data
 }
+
 func GetOutbound(proxy string) (*option.Outbound, string, error) {
 	data := Get()
+	var bestOut *option.Outbound
+	var bestHost string
+	// 初始化最小延迟为一个较大的数，或者通过逻辑判断
+	var minLatency int64 = 99999999
+
 	for i, p := range data {
-		if p.Name != proxy {
-			continue
-		}
 		var out option.Outbound
 		switch p.Protocol {
 		case "shadowsocks":
@@ -130,16 +133,27 @@ func GetOutbound(proxy string) (*option.Outbound, string, error) {
 		client := echo.NewClient("1.1.1.1:80", echo.WithTimeout(3*time.Second), echo.WithDialer(createOutbound.DialContext))
 		err = client.Connect(context.Background())
 		if err != nil {
+			log.Println(fmt.Sprintf("节点连接失败:ID:%d 节点:%s，UUID:%s 错误:%v", i, p.Name, p.Password, err))
 			continue
 		}
 		var ms int64
 		result := client.Test(context.Background(), []byte("GET / HTTP/1.1\r\nHost: 1.1.1.1\r\nAccept: *\r\n\r\n\r\n"))
 		ms = result.Latency.Milliseconds()
-		log.Println(fmt.Sprintf("节点选择:ID:%d 节点:%s 延迟=%dms\n", i, p.Name, ms))
-		if ms <= 0 {
-			return nil, "", errors.New("节点超时")
+		log.Println(fmt.Sprintf("节点检测:ID:%d 节点:%s 延迟=%dms", i, p.Name, ms))
+
+		if ms > 0 && ms < minLatency {
+			minLatency = ms
+			// 必须复制一份 out，否则循环变量可能会被覆盖（但在 switch case 重新赋值结构体一般是安全的，这里为了保险起见直接保存需要的值）
+			currentOut := out
+			bestOut = &currentOut
+			bestHost = p.Host
 		}
-		return &out, p.Host, nil
 	}
-	return nil, "", errors.New("not fount Outbound")
+
+	if bestOut != nil {
+		log.Println(fmt.Sprintf("最终选择节点: %s, 延迟: %dms", bestHost, minLatency))
+		return bestOut, bestHost, nil
+	}
+
+	return nil, "", errors.New("not found valid Outbound")
 }
