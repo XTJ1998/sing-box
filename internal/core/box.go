@@ -7,9 +7,6 @@ import (
 	"net"
 	"net/netip"
 	"os"
-	"path/filepath"
-	"playfast/internal/api"
-	httpclient "playfast/internal/http-client"
 	"playfast/internal/node"
 	"playfast/internal/path"
 	"playfast/utils"
@@ -27,21 +24,21 @@ import (
 	"github.com/sagernet/sing/service"
 )
 
-//go:embed geoip-cn.srs
-var geoip []byte
-
-//go:embed geosite-cn.srs
-var geosite []byte
-
-// black 包含需要拦截的黑名单域名列表
+////go:embed geoip-cn.srs
+//var geoip []byte
 //
-//go:embed black-list.json
-var black []byte
-
-// direct 包含需要直连的白名单域名列表
+////go:embed geosite-cn.srs
+//var geosite []byte
 //
-//go:embed direct-list.json
-var direct []byte
+//// black 包含需要拦截的黑名单域名列表
+////
+////go:embed black-list.json
+//var black []byte
+//
+//// direct 包含需要直连的白名单域名列表
+////
+////go:embed direct-list.json
+//var direct []byte
 
 type Box struct {
 	box              *box.Box
@@ -146,10 +143,10 @@ func New(ctx context.Context) *Box {
 		include.ServiceRegistry())
 
 	// 将嵌入的配置文件写入到应用程序目录
-	_ = os.WriteFile(filepath.Join(path.Path(), "black-list.json"), black, 0644)
-	_ = os.WriteFile(filepath.Join(path.Path(), "direct-list.json"), direct, 0644)
-	_ = os.WriteFile(filepath.Join(path.Path(), "geoip-cn.srs"), geoip, 0644)
-	_ = os.WriteFile(filepath.Join(path.Path(), "geosite-cn.srs"), geosite, 0644)
+	//_ = os.WriteFile(filepath.Join(path.Path(), "black-list.json"), black, 0644)
+	//_ = os.WriteFile(filepath.Join(path.Path(), "direct-list.json"), direct, 0644)
+	//_ = os.WriteFile(filepath.Join(path.Path(), "geoip-cn.srs"), geoip, 0644)
+	//_ = os.WriteFile(filepath.Join(path.Path(), "geosite-cn.srs"), geosite, 0644)
 
 	// 创建 Box 实例
 	b := Box{
@@ -158,57 +155,57 @@ func New(ctx context.Context) *Box {
 	}
 
 	// 异步更新配置文件
-	go b.update()
+	//go b.update()
 
 	return &b
 }
 
 // update 从远程服务器更新配置文件
 // 该方法会异步执行，尝试下载最新的配置文件，如果下载失败则使用嵌入的默认配置
-func (b *Box) update() {
-	var data []byte
-	var err error
-
-	// 更新黑名单配置文件
-	data, err = httpclient.GET(fmt.Sprintf("%s/black-list.json", api.GetApiDomain()))
-	if err != nil {
-		// 如果下载失败，使用嵌入的默认配置
-		data = black
-	}
-	b.Lock()
-	_ = os.WriteFile(filepath.Join(path.Path(), "black-list.json"), data, 0644)
-	b.Unlock()
-
-	// 更新白名单配置文件
-	data, err = httpclient.GET(fmt.Sprintf("%s/direct-list.json", api.GetApiDomain()))
-	if err != nil {
-		// 如果下载失败，使用嵌入的默认配置
-		data = direct
-	}
-	b.Lock()
-	_ = os.WriteFile(filepath.Join(path.Path(), "direct-list.json"), data, 0644)
-	b.Unlock()
-
-	// 更新中国IP地址数据库
-	data, err = httpclient.GET("https://raw.githubusercontent.com/SagerNet/sing-geoip/rule-set/geoip-cn.srs")
-	if err != nil {
-		// 如果下载失败，使用嵌入的默认配置
-		data = geoip
-	}
-	b.Lock()
-	_ = os.WriteFile(filepath.Join(path.Path(), "geoip-cn.srs"), data, 0644)
-	b.Unlock()
-
-	// 更新中国网站域名数据库
-	data, err = httpclient.GET("https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-cn.srs")
-	if err != nil {
-		// 如果下载失败，使用嵌入的默认配置
-		data = geosite
-	}
-	b.Lock()
-	_ = os.WriteFile(filepath.Join(path.Path(), "geosite-cn.srs"), data, 0644)
-	b.Unlock()
-}
+//func (b *Box) update() {
+//	var data []byte
+//	var err error
+//
+//	// 更新黑名单配置文件
+//	data, err = httpclient.GET(fmt.Sprintf("%s/black-list.json", api.GetApiDomain()))
+//	if err != nil {
+//		// 如果下载失败，使用嵌入的默认配置
+//		data = black
+//	}
+//	b.Lock()
+//	_ = os.WriteFile(filepath.Join(path.Path(), "black-list.json"), data, 0644)
+//	b.Unlock()
+//
+//	// 更新白名单配置文件
+//	data, err = httpclient.GET(fmt.Sprintf("%s/direct-list.json", api.GetApiDomain()))
+//	if err != nil {
+//		// 如果下载失败，使用嵌入的默认配置
+//		data = direct
+//	}
+//	b.Lock()
+//	_ = os.WriteFile(filepath.Join(path.Path(), "direct-list.json"), data, 0644)
+//	b.Unlock()
+//
+//	// 更新中国IP地址数据库
+//	data, err = httpclient.GET("https://raw.githubusercontent.com/SagerNet/sing-geoip/rule-set/geoip-cn.srs")
+//	if err != nil {
+//		// 如果下载失败，使用嵌入的默认配置
+//		data = geoip
+//	}
+//	b.Lock()
+//	_ = os.WriteFile(filepath.Join(path.Path(), "geoip-cn.srs"), data, 0644)
+//	b.Unlock()
+//
+//	// 更新中国网站域名数据库
+//	data, err = httpclient.GET("https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-cn.srs")
+//	if err != nil {
+//		// 如果下载失败，使用嵌入的默认配置
+//		data = geosite
+//	}
+//	b.Lock()
+//	_ = os.WriteFile(filepath.Join(path.Path(), "geosite-cn.srs"), data, 0644)
+//	b.Unlock()
+//}
 
 // newBox 创建并配置一个新的 sing-box 实例
 func (b *Box) newBox(proxy string, apps []string) error {
@@ -284,22 +281,22 @@ func (b *Box) newBox(proxy string, apps []string) error {
 					// DNS路由规则
 					Rules: []option.DNSRule{
 						// 中国网站使用本地DNS
-						{
-							Type: constant.RuleTypeDefault,
-							DefaultOptions: option.DefaultDNSRule{
-								RawDefaultDNSRule: option.RawDefaultDNSRule{
-									RuleSet: []string{
-										"geosite-cn",
-									},
-								},
-								DNSRuleAction: option.DNSRuleAction{
-									Action: constant.RuleActionTypeRoute,
-									RouteOptions: option.DNSRouteActionOptions{
-										Server: "localDns",
-									},
-								},
-							},
-						},
+						//{
+						//	Type: constant.RuleTypeDefault,
+						//	DefaultOptions: option.DefaultDNSRule{
+						//		RawDefaultDNSRule: option.RawDefaultDNSRule{
+						//			RuleSet: []string{
+						//				"geosite-cn",
+						//			},
+						//		},
+						//		DNSRuleAction: option.DNSRuleAction{
+						//			Action: constant.RuleActionTypeRoute,
+						//			RouteOptions: option.DNSRouteActionOptions{
+						//				Server: "localDns",
+						//			},
+						//		},
+						//	},
+						//},
 						// 代理服务器使用本地DNS
 						{
 							Type: constant.RuleTypeDefault,
@@ -358,36 +355,37 @@ func (b *Box) newBox(proxy string, apps []string) error {
 			// 路由配置
 			Route: &option.RouteOptions{
 				// 路由规则集合
-				RuleSet: []option.RuleSet{
-					// 中国网站域名集合
-					{
-						Type:         constant.RuleSetTypeLocal,
-						Tag:          "geosite-cn",
-						Format:       constant.RuleSetFormatBinary,
-						LocalOptions: option.LocalRuleSet{Path: filepath.Join(path.Path(), "geosite-cn.srs")},
-					},
-					// 中国IP地址集合
-					{
-						Type:         constant.RuleSetTypeLocal,
-						Tag:          "geoip-cn",
-						Format:       constant.RuleSetFormatBinary,
-						LocalOptions: option.LocalRuleSet{Path: filepath.Join(path.Path(), "geoip-cn.srs")},
-					},
-					// 黑名单域名集合
-					{
-						Type:         constant.RuleSetTypeLocal,
-						Tag:          "black-list",
-						Format:       constant.RuleSetFormatSource,
-						LocalOptions: option.LocalRuleSet{Path: filepath.Join(path.Path(), "black-list.json")},
-					},
-					// 白名单域名集合
-					{
-						Type:         constant.RuleSetTypeLocal,
-						Tag:          "direct-list",
-						Format:       constant.RuleSetFormatSource,
-						LocalOptions: option.LocalRuleSet{Path: filepath.Join(path.Path(), "direct-list.json")},
-					},
-				},
+				RuleSet: nil,
+				//RuleSet: []option.RuleSet{
+				//	// 中国网站域名集合
+				//	{
+				//		Type:         constant.RuleSetTypeLocal,
+				//		Tag:          "geosite-cn",
+				//		Format:       constant.RuleSetFormatBinary,
+				//		LocalOptions: option.LocalRuleSet{Path: filepath.Join(path.Path(), "geosite-cn.srs")},
+				//	},
+				//	// 中国IP地址集合
+				//	{
+				//		Type:         constant.RuleSetTypeLocal,
+				//		Tag:          "geoip-cn",
+				//		Format:       constant.RuleSetFormatBinary,
+				//		LocalOptions: option.LocalRuleSet{Path: filepath.Join(path.Path(), "geoip-cn.srs")},
+				//	},
+				//	// 黑名单域名集合
+				//	{
+				//		Type:         constant.RuleSetTypeLocal,
+				//		Tag:          "black-list",
+				//		Format:       constant.RuleSetFormatSource,
+				//		LocalOptions: option.LocalRuleSet{Path: filepath.Join(path.Path(), "black-list.json")},
+				//	},
+				//	// 白名单域名集合
+				//	{
+				//		Type:         constant.RuleSetTypeLocal,
+				//		Tag:          "direct-list",
+				//		Format:       constant.RuleSetFormatSource,
+				//		LocalOptions: option.LocalRuleSet{Path: filepath.Join(path.Path(), "direct-list.json")},
+				//	},
+				//},
 				// 自动检测网络接口
 				AutoDetectInterface: true,
 				// 初始化空的路由规则列表
@@ -447,62 +445,62 @@ func (b *Box) newBox(proxy string, apps []string) error {
 				},
 			},
 		}, //解析协议域名
-		{
-			Type: constant.RuleTypeDefault,
-			DefaultOptions: option.DefaultRule{
-				RawDefaultRule: option.RawDefaultRule{
-					RuleSet: []string{"black-list"},
-				},
-				RuleAction: option.RuleAction{
-					Action: constant.RuleActionTypeReject,
-					RejectOptions: option.RejectActionOptions{
-						Method: constant.RuleActionRejectMethodDefault,
-						NoDrop: false,
-					},
-				},
-			},
-		}, //过滤黑名单
-		{
-			Type: constant.RuleTypeDefault,
-			DefaultOptions: option.DefaultRule{
-				RawDefaultRule: option.RawDefaultRule{
-					RuleSet: []string{"direct-list"},
-				},
-				RuleAction: option.RuleAction{
-					Action: constant.RuleActionTypeRoute,
-					RouteOptions: option.RouteActionOptions{
-						Outbound: "direct",
-					},
-				},
-			},
-		}, //直连白名单
-		{
-			Type: constant.RuleTypeDefault,
-			DefaultOptions: option.DefaultRule{
-				RawDefaultRule: option.RawDefaultRule{
-					Protocol: []string{"dns"},
-				},
-				RuleAction: option.RuleAction{
-					Action: constant.RuleActionTypeHijackDNS,
-				},
-			},
-		}, //dns劫持
-		{
-			Type: constant.RuleTypeDefault,
-			DefaultOptions: option.DefaultRule{
-				RawDefaultRule: option.RawDefaultRule{
-					RuleSet: []string{
-						"geosite-cn", "geoip-cn",
-					},
-				},
-				RuleAction: option.RuleAction{
-					Action: constant.RuleActionTypeRoute,
-					RouteOptions: option.RouteActionOptions{
-						Outbound: "direct",
-					},
-				},
-			},
-		},
+		//{
+		//	Type: constant.RuleTypeDefault,
+		//	DefaultOptions: option.DefaultRule{
+		//		RawDefaultRule: option.RawDefaultRule{
+		//			RuleSet: []string{"black-list"},
+		//		},
+		//		RuleAction: option.RuleAction{
+		//			Action: constant.RuleActionTypeReject,
+		//			RejectOptions: option.RejectActionOptions{
+		//				Method: constant.RuleActionRejectMethodDefault,
+		//				NoDrop: false,
+		//			},
+		//		},
+		//	},
+		//}, //过滤黑名单
+		//{
+		//	Type: constant.RuleTypeDefault,
+		//	DefaultOptions: option.DefaultRule{
+		//		RawDefaultRule: option.RawDefaultRule{
+		//			RuleSet: []string{"direct-list"},
+		//		},
+		//		RuleAction: option.RuleAction{
+		//			Action: constant.RuleActionTypeRoute,
+		//			RouteOptions: option.RouteActionOptions{
+		//				Outbound: "direct",
+		//			},
+		//		},
+		//	},
+		//}, //直连白名单
+		//{
+		//	Type: constant.RuleTypeDefault,
+		//	DefaultOptions: option.DefaultRule{
+		//		RawDefaultRule: option.RawDefaultRule{
+		//			Protocol: []string{"dns"},
+		//		},
+		//		RuleAction: option.RuleAction{
+		//			Action: constant.RuleActionTypeHijackDNS,
+		//		},
+		//	},
+		//}, //dns劫持
+		//{
+		//	Type: constant.RuleTypeDefault,
+		//	DefaultOptions: option.DefaultRule{
+		//		RawDefaultRule: option.RawDefaultRule{
+		//			RuleSet: []string{
+		//				"geosite-cn", "geoip-cn",
+		//			},
+		//		},
+		//		RuleAction: option.RuleAction{
+		//			Action: constant.RuleActionTypeRoute,
+		//			RouteOptions: option.RouteActionOptions{
+		//				Outbound: "direct",
+		//			},
+		//		},
+		//	},
+		//},
 	}...)
 	// 2. [新增] 动态应用程序规则
 	if len(apps) > 0 {
